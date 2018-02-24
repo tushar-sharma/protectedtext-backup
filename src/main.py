@@ -11,6 +11,7 @@ import shutil
 import datetime
 import logging
 import sys
+import argparse
 
 def log_except_hook(*exc_info):
     exc = "".join(tracebook.format_exception(*exc_info))
@@ -28,16 +29,28 @@ def get_content(site):
 Save data to disk
 """
 def save_file(data, site, backup_file):
-    with open(secret_file, "w") as f:
+    with open(backup_file, "w") as f:
         f.write(data)
         logging.debug("Wrote: " + site)
 
 """
 create directories if not exist
 """
-def setup():
-    if not os.path.exists(PATH):
-        os.makedirs(PATH)
+def setup(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+"""
+Parse the sites url to parse
+"""
+def get_args():
+    parser = argparse.ArgumentParser(description='Protectedtext.com backup')
+
+    parser.add_argument('--nargs', nargs='+', help="Sites name to save")
+
+    for _,  value in parser.parse_args()._get_kwargs():
+        if value is not None:
+            return value
 
 def main():
     PATH = os.getcwd()
@@ -45,29 +58,35 @@ def main():
     backup_path = PATH + "/backup/"
     log_file = log_path + 'events.log'
 
-    sys.excepthook = log_except_hook
-    logging.debug("Start")
+    # create required directories
+    setup(log_path)
+    setup(backup_path)
 
-    sites = ["golmal"]
+    sites = get_args()
+
 
     logging.basicConfig(filename=log_path + 'events.log',
                     level = logging.DEBUG,
                     format='%(asctime)s %(levelname)s %(message)s')
 
+    sys.excepthook = log_except_hook
 
-    setup(log_path)
-    setup(lbackup_path)
+    logging.debug("Start")
 
-    for site in sites:
-        backup_file = backup_path + site
-        content = get_content(site)
+    if sites:
 
-        if not content:
-            logging.debug("There is no secret "  + site )
-            sys.exit(1)
+        for site in sites:
+            backup_file = backup_path + site
+            content = get_content(site)
 
-        save_file(content, site, backup_file)
+            if not content:
+                logging.debug("There is no secret "  + site )
+                sys.exit(1)
 
+            save_file(content, site, backup_file)
+    else:
+        logging.debug("No sites to save ")
+        sys.exit(1)
 
 if __name__=="__main__":
     main()
